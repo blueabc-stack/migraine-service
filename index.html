@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>HIT-6 头痛影响测试</title>
+<script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
+<style>
+  :root {
+    --primary: #6C63FF;
+    --primary-light: #8B85FF;
+    --primary-bg: #F0EEFF;
+    --accent: #FF6B6B;
+    --green: #4ECDC4;
+    --yellow: #FFD93D;
+    --orange: #FF8C42;
+    --red: #FF4757;
+    --bg: #F8F7FF;
+    --card: #FFFFFF;
+    --text: #2D3436;
+    --text-light: #636E72;
+    --border: #E8E6F0;
+    --radius: 16px;
+    --shadow: 0 4px 20px rgba(108,99,255,0.08);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+    background: var(--bg); color: var(--text); min-height: 100vh; padding-bottom: 60px;
+  }
+  .header {
+    background: linear-gradient(135deg, var(--primary) 0%, #A78BFA 100%);
+    color: #fff; padding: 28px 20px 24px; text-align: center; position: relative; overflow: hidden;
+  }
+  .header::before { content:''; position:absolute; top:-30px; right:-30px; width:120px; height:120px; background:rgba(255,255,255,0.1); border-radius:50%; }
+  .header::after { content:''; position:absolute; bottom:-20px; left:-20px; width:80px; height:80px; background:rgba(255,255,255,0.08); border-radius:50%; }
+  .header h1 { font-size:22px; font-weight:700; letter-spacing:1px; position:relative; }
+  .header .subtitle { font-size:13px; opacity:0.85; margin-top:6px; position:relative; }
+  .header .emoji-row { font-size:28px; margin-bottom:8px; position:relative; }
+
+  /* 患者信息 */
+  .patient-info, .progress-bar { margin:12px 16px; background:var(--card); border-radius:var(--radius); padding:18px; box-shadow:var(--shadow); }
+  .patient-info .section-title { font-size:14px; color:var(--primary); font-weight:600; margin-bottom:12px; display:flex; align-items:center; gap:6px; }
+  .info-row { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:10px; }
+  .info-row:last-child { margin-bottom:0; }
+  .info-field { flex:1; min-width:140px; }
+  .info-field label { font-size:12px; color:var(--text-light); margin-bottom:4px; display:block; }
+  .info-field input { width:100%; padding:10px 12px; border:1.5px solid var(--border); border-radius:10px; font-size:14px; outline:none; transition:border-color .2s; background:#FAFAFE; font-family:inherit; }
+  .info-field input:focus { border-color:var(--primary-light); box-shadow:0 0 0 3px rgba(108,99,255,0.1); }
+
+  /* 进度条 */
+  .progress-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+  .progress-label { font-size:13px; color:var(--text-light); font-weight:500; }
+  .progress-count { font-size:13px; color:var(--primary); font-weight:700; }
+  .progress-track { height:8px; background:var(--primary-bg); border-radius:4px; overflow:hidden; }
+  .progress-fill { height:100%; background:linear-gradient(90deg,var(--primary),var(--primary-light)); border-radius:4px; transition:width .4s ease; width:0%; }
+
+  /* 题目卡片 */
+  .question-card { margin:12px 16px; background:var(--card); border-radius:var(--radius); padding:20px 18px; box-shadow:var(--shadow); transition:transform .2s,box-shadow .2s; position:relative; overflow:hidden; }
+  .question-card:hover { transform:translateY(-1px); box-shadow:0 6px 24px rgba(108,99,255,0.12); }
+  .question-card.answered { border-left:4px solid var(--green); }
+  .q-number { display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; background:var(--primary); color:#fff; border-radius:50%; font-size:13px; font-weight:700; margin-right:8px; flex-shrink:0; }
+  .question-card.answered .q-number { background:var(--green); }
+  .q-header { display:flex; align-items:flex-start; margin-bottom:14px; }
+  .q-text { font-size:15px; line-height:1.6; font-weight:500; flex:1; }
+  .q-dimension { display:inline-block; font-size:11px; color:var(--primary); background:var(--primary-bg); padding:2px 8px; border-radius:6px; margin-top:6px; }
+  .select-wrapper { position:relative; margin-top:4px; }
+  .select-wrapper select { width:100%; padding:12px 40px 12px 14px; font-size:14px; border:1.5px solid var(--border); border-radius:12px; background:#FAFAFE; color:var(--text); outline:none; appearance:none; -webkit-appearance:none; cursor:pointer; transition:all .2s; font-family:inherit; }
+  .select-wrapper select:focus { border-color:var(--primary-light); box-shadow:0 0 0 3px rgba(108,99,255,0.1); background:#fff; }
+  .select-wrapper select.selected { border-color:var(--green); background:#F0FFF4; }
+  .select-wrapper::after { content:'▾'; position:absolute; right:14px; top:50%; transform:translateY(-50%); color:var(--text-light); pointer-events:none; font-size:14px; }
+  .score-hint { display:inline-block; margin-top:8px; font-size:12px; color:var(--text-light); opacity:0; transition:opacity .3s; }
+  .score-hint.visible { opacity:1; }
+  .score-hint .score-val { color:var(--primary); font-weight:700; }
+
+  /* 结果面板 */
+  .result-panel { margin:20px 16px; background:var(--card); border-radius:var(--radius); box-shadow:0 6px 30px rgba(108,99,255,0.12); overflow:hidden; opacity:0; transform:translateY(20px); transition:all .5s ease; }
+  .result-panel.show { opacity:1; transform:translateY(0); }
+  .result-header { padding:20px; text-align:center; color:#fff; position:relative; }
+  .result-header.level-1 { background:linear-gradient(135deg,#4ECDC4,#44B3AA); }
+  .result-header.level-2 { background:linear-gradient(135deg,#FFD93D,#F0C929); }
+  .result-header.level-3 { background:linear-gradient(135deg,#FF8C42,#E67A35); }
+  .result-header.level-4 { background:linear-gradient(135deg,#FF4757,#E63E4D); }
+  .result-score { font-size:56px; font-weight:800; line-height:1; }
+  .result-total { font-size:14px; opacity:0.9; margin-top:4px; }
+  .result-level { display:inline-block; margin-top:10px; padding:4px 16px; background:rgba(255,255,255,0.25); border-radius:20px; font-size:14px; font-weight:600; }
+  .result-body { padding:20px; }
+  .result-bar-container { margin-bottom:16px; }
+  .result-bar-label { display:flex; justify-content:space-between; font-size:12px; color:var(--text-light); margin-bottom:6px; }
+  .result-bar-track { height:12px; background:#EEE; border-radius:6px; overflow:hidden; position:relative; }
+  .result-bar-segments { display:flex; height:100%; width:100%; }
+  .result-bar-segments .seg { height:100%; }
+  .seg-1 { background:#4ECDC4; flex:14; } .seg-2 { background:#FFD93D; flex:6; }
+  .seg-3 { background:#FF8C42; flex:4; } .seg-4 { background:#FF4757; flex:19; }
+  .result-bar-pointer { position:absolute; top:-4px; width:4px; height:20px; background:var(--text); border-radius:2px; transition:left .6s ease; }
+  .result-legend { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+  .legend-item { display:flex; align-items:center; gap:4px; font-size:11px; color:var(--text-light); }
+  .legend-dot { width:10px; height:10px; border-radius:3px; flex-shrink:0; }
+  .result-advice { margin-top:16px; padding:14px; background:#F8F7FF; border-radius:12px; font-size:13px; line-height:1.7; color:var(--text); }
+  .result-advice strong { color:var(--primary); }
+
+  /* 按钮 */
+  .bottom-actions { margin:16px; display:flex; gap:10px; }
+  .btn { flex:1; padding:14px; border:none; border-radius:12px; font-size:15px; font-weight:600; cursor:pointer; transition:all .2s; font-family:inherit; }
+  .btn:active { transform:scale(0.97); }
+  .btn-primary { background:linear-gradient(135deg,var(--primary),var(--primary-light)); color:#fff; box-shadow:0 4px 15px rgba(108,99,255,0.3); }
+  .btn-primary:hover { box-shadow:0 6px 20px rgba(108,99,255,0.4); }
+  .btn-primary:disabled { opacity:0.5; cursor:not-allowed; box-shadow:none; }
+  .btn-outline { background:var(--card); color:var(--primary); border:1.5px solid var(--primary); }
+  .btn-sm { padding:10px 14px; font-size:13px; border-radius:10px; }
+  .btn-green { background:linear-gradient(135deg,#4ECDC4,#44B3AA); color:#fff; box-shadow:0 4px 12px rgba(78,205,196,0.3); }
+  .btn-orange { background:linear-gradient(135deg,#FF8C42,#E67A35); color:#fff; box-shadow:0 4px 12px rgba(255,140,66,0.3); }
+
+  /* 分隔线 */
+  .section-divider { margin:30px 16px 20px; display:flex; align-items:center; gap:12px; }
+  .section-divider .line { flex:1; height:2px; background:linear-gradient(90deg,transparent,var(--primary-bg),var(--primary),var(--primary-bg),transparent); border-radius:1px; }
+  .section-divider .divider-label { font-size:15px; font-weight:700; color:var(--primary); white-space:nowrap; padding:6px 18px; background:var(--primary-bg); border-radius:20px; }
+
+  /* 报告区域 */
+  .report-section { margin:16px; display:none; }
+  .report-section.show { display:block; animation:fadeInUp .6s ease forwards; }
+  @keyframes fadeInUp { from{opacity:0;transform:translateY(30px)} to{opacity:1;transform:translateY(0)} }
+
+  .report-toolbar { margin:16px; display:none; gap:10px; justify-content:center; flex-wrap:wrap; }
+  .report-toolbar.show { display:flex; }
+
+  /* 报告内容 */
+  .report-card { background:#fff; border-radius:var(--radius); box-shadow:0 4px 24px rgba(108,99,255,0.08); overflow:hidden; }
+
+  .report-banner { background:linear-gradient(135deg,#6C63FF 0%,#A78BFA 50%,#C4B5FD 100%); padding:36px 30px 28px; text-align:center; position:relative; overflow:hidden; }
+  .report-banner::before { content:''; position:absolute; top:-40px; right:-40px; width:160px; height:160px; background:rgba(255,255,255,0.08); border-radius:50%; }
+  .report-banner::after { content:''; position:absolute; bottom:-30px; left:30px; width:100px; height:100px; background:rgba(255,255,255,0.06); border-radius:50%; }
+  .report-banner .r-icon { font-size:40px; margin-bottom:8px; position:relative; }
+  .report-banner .r-title { font-size:24px; font-weight:800; color:#fff; letter-spacing:2px; position:relative; text-shadow:0 2px 8px rgba(0,0,0,0.1); }
+  .report-banner .r-sub { font-size:13px; color:rgba(255,255,255,0.85); margin-top:6px; position:relative; }
+  .report-banner .r-line { width:60px; height:3px; background:rgba(255,255,255,0.5); border-radius:2px; margin:12px auto 0; position:relative; }
+
+  .encourage-block { margin:24px 30px; padding:18px 22px; border-radius:14px; position:relative; overflow:hidden; }
+  .encourage-block.top { background:linear-gradient(135deg,#F0EEFF 0%,#E8F5E9 100%); border-left:4px solid var(--primary); }
+  .encourage-block.bottom { background:linear-gradient(135deg,#FFF8E1 0%,#FCE4EC 100%); border-left:4px solid #FF8C42; }
+  .encourage-block .enc-emoji { font-size:24px; margin-bottom:6px; }
+  .encourage-block .enc-text { font-size:15px; font-weight:600; line-height:1.8; color:#444; }
+  .encourage-block .enc-author { font-size:12px; color:#999; margin-top:8px; text-align:right; }
+
+  .rpt-section { margin:20px 30px; }
+  .rpt-section-title { font-size:16px; font-weight:700; color:var(--primary); margin-bottom:12px; display:flex; align-items:center; gap:8px; padding-bottom:8px; border-bottom:2px solid var(--primary-bg); }
+  .rpt-section-title .sec-icon { font-size:20px; }
+
+  .rpt-info-table { width:100%; border-collapse:collapse; margin-bottom:4px; }
+  .rpt-info-table td { padding:8px 12px; font-size:13px; border-bottom:1px solid #f0f0f0; }
+  .rpt-info-table td:first-child { color:#999; width:35%; white-space:nowrap; }
+  .rpt-info-table td:last-child { color:#333; font-weight:500; }
+
+  .rpt-q-table { width:100%; border-collapse:collapse; font-size:13px; }
+  .rpt-q-table th { background:var(--primary-bg); color:var(--primary); padding:10px 12px; text-align:left; font-weight:600; font-size:12px; }
+  .rpt-q-table td { padding:10px 12px; border-bottom:1px solid #f0f0f0; }
+  .rpt-q-table tr:last-child td { border-bottom:none; }
+  .rpt-q-table .q-num { display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; background:var(--primary); color:#fff; border-radius:50%; font-size:11px; font-weight:700; }
+
+  .score-badge { display:inline-block; padding:2px 10px; border-radius:10px; font-size:12px; font-weight:600; }
+  .score-6 { background:#E8F5E9; color:#2E7D32; } .score-8 { background:#E3F2FD; color:#1565C0; }
+  .score-10 { background:#FFF8E1; color:#F57F17; } .score-11 { background:#FFF3E0; color:#E65100; }
+  .score-13 { background:#FFEBEE; color:#C62828; }
+
+  .score-result-card { margin:20px 30px; padding:24px; border-radius:16px; text-align:center; position:relative; overflow:hidden; }
+  .score-result-card.level-1 { background:linear-gradient(135deg,#E0F7FA,#E8F5E9); }
+  .score-result-card.level-2 { background:linear-gradient(135deg,#FFFDE7,#FFF8E1); }
+  .score-result-card.level-3 { background:linear-gradient(135deg,#FFF3E0,#FBE9E7); }
+  .score-result-card.level-4 { background:linear-gradient(135deg,#FFEBEE,#FCE4EC); }
+  .score-big { font-size:52px; font-weight:900; line-height:1; background:linear-gradient(135deg,var(--primary),var(--accent)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+  .score-label { font-size:13px; color:#999; margin-top:4px; }
+  .grade-badge { display:inline-block; margin-top:12px; padding:6px 20px; border-radius:20px; font-size:15px; font-weight:700; color:#fff; }
+  .grade-badge.level-1 { background:linear-gradient(135deg,#4ECDC4,#44B3AA); }
+  .grade-badge.level-2 { background:linear-gradient(135deg,#FFD93D,#F0C929); color:#6D5800; }
+  .grade-badge.level-3 { background:linear-gradient(135deg,#FF8C42,#E67A35); }
+  .grade-badge.level-4 { background:linear-gradient(135deg,#FF4757,#E63E4D); }
+
+  .rpt-bar-wrap { margin:16px 30px; }
+  .rpt-bar-labels { display:flex; justify-content:space-between; font-size:11px; color:#aaa; margin-bottom:4px; }
+  .rpt-bar-track { height:14px; background:#eee; border-radius:7px; overflow:visible; position:relative; }
+  .rpt-bar-segs { display:flex; height:100%; border-radius:7px; overflow:hidden; }
+  .rpt-bar-segs .s1 { background:#4ECDC4; flex:14; } .rpt-bar-segs .s2 { background:#FFD93D; flex:6; }
+  .rpt-bar-segs .s3 { background:#FF8C42; flex:4; } .rpt-bar-segs .s4 { background:#FF4757; flex:19; }
+  .rpt-bar-arrow { position:absolute; top:-6px; transform:translateX(-50%); width:0; height:0; border-left:7px solid transparent; border-right:7px solid transparent; border-top:10px solid var(--text); transition:left .5s ease; }
+
+  .advice-block { margin:20px 30px; padding:18px 20px; border-radius:14px; background:#F8F7FF; border:1px solid var(--primary-bg); }
+  .advice-block h4 { color:var(--primary); font-size:14px; margin-bottom:8px; display:flex; align-items:center; gap:6px; }
+  .advice-block p { font-size:13px; line-height:1.8; color:#555; margin-bottom:6px; }
+  .advice-block p:last-child { margin-bottom:0; }
+  .advice-block ul { margin:6px 0; padding-left:20px; }
+  .advice-block li { font-size:13px; line-height:1.8; color:#555; }
+
+  /* ICHD-3 诊断标准 */
+  .ref-section { margin:20px 30px; padding:18px 20px; border-radius:14px; background:linear-gradient(135deg,#F0EEFF,#FAFAFE); border:1px solid var(--primary-bg); }
+  .ref-section h4 { color:var(--primary); font-size:14px; margin-bottom:10px; display:flex; align-items:center; gap:6px; }
+  .ref-section p, .ref-section li { font-size:12px; line-height:1.8; color:#555; }
+  .ref-section ul { padding-left:18px; margin:6px 0; }
+  .ref-note { font-size:11px; color:#999; font-style:italic; margin-top:8px; }
+  .dx-card { margin:10px 0; padding:12px 16px; background:#fff; border-radius:10px; border:1px solid #eee; }
+  .dx-card .dx-title { font-size:13px; font-weight:700; color:var(--primary); margin-bottom:6px; display:flex; align-items:center; gap:4px; }
+  .dx-card .dx-list { list-style:none; padding:0; }
+  .dx-card .dx-list li { font-size:12px; line-height:1.7; color:#555; padding:2px 0 2px 16px; position:relative; }
+  .dx-card .dx-list li::before { content:'•'; position:absolute; left:0; color:var(--primary); font-weight:700; }
+
+  /* 治疗方案 */
+  .treatment-card { margin:12px 30px; padding:16px 18px; border-radius:12px; border:1px solid #C6F6D5; }
+  .treatment-card.acute { background:#F0FFF4; }
+  .treatment-card.preventive { background:#EBF8FF; border-color:#BEE3F8; }
+  .treatment-card h4 { font-size:13px; margin-bottom:8px; display:flex; align-items:center; gap:6px; }
+  .treatment-card.acute h4 { color:#2E7D32; }
+  .treatment-card.preventive h4 { color:#1565C0; }
+  .drug-tags { display:flex; flex-wrap:wrap; gap:4px; margin-top:6px; }
+  .drug-tag { display:inline-block; padding:3px 10px; background:#fff; border:1px solid #C6F6D5; border-radius:8px; font-size:11px; color:#2E7D32; }
+  .drug-tag.blue { border-color:#BEE3F8; color:#1565C0; }
+  .treatment-note { font-size:11px; color:#999; margin-top:8px; padding-top:8px; border-top:1px dashed #eee; }
+
+  /* 生活方式管理 */
+  .lifestyle-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:10px 0; }
+  .lifestyle-item { padding:12px; border-radius:10px; }
+  .lifestyle-item:nth-child(odd) { background:#FFF8E1; border:1px solid #FFE082; }
+  .lifestyle-item:nth-child(even) { background:#E8F5E9; border:1px solid #C8E6C9; }
+  .lifestyle-item h5 { font-size:12px; margin-bottom:4px; }
+  .lifestyle-item:nth-child(odd) h5 { color:#F57F17; }
+  .lifestyle-item:nth-child(even) h5 { color:#2E7D32; }
+  .lifestyle-item p { font-size:11px; color:#666; line-height:1.6; }
+
+  /* 紧急就医 */
+  .warning-box { margin:20px 30px; padding:16px 18px; border-radius:12px; background:#FFEBEE; border:1px solid #FFCDD2; }
+  .warning-box h4 { font-size:14px; color:#C62828; margin-bottom:8px; display:flex; align-items:center; gap:6px; }
+  .warning-box ul { padding-left:18px; }
+  .warning-box li { font-size:12px; line-height:1.8; color:#C62828; }
+
+  .disclaimer { margin:20px 30px 10px; padding:16px 18px; border-radius:12px; background:#FAFAFA; border:1px dashed #ddd; font-size:12px; color:#999; line-height:1.8; }
+  .disclaimer strong { color:#777; }
+  .report-footer { text-align:center; padding:20px 30px 28px; font-size:12px; color:#bbb; border-top:1px solid #f0f0f0; }
+  .report-footer .footer-line { width:40px; height:2px; background:var(--primary-bg); border-radius:1px; margin:0 auto 10px; }
+
+  .date-display { text-align:center; font-size:12px; color:var(--text-light); margin:10px 16px 0; }
+  .confetti { position:fixed; top:0; left:0; right:0; bottom:0; pointer-events:none; z-index:999; }
+
+  @media (min-width:600px) { body { max-width:480px; margin:0 auto; } }
+  @media (max-width:400px) {
+    .report-banner { padding:24px 20px 20px; }
+    .rpt-section, .encourage-block, .score-result-card, .rpt-bar-wrap,
+    .advice-block, .disclaimer, .ref-section, .warning-box { margin-left:16px; margin-right:16px; }
+    .treatment-card { margin-left:16px; margin-right:16px; }
+    .lifestyle-grid { grid-template-columns:1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== 表单区域 ===== -->
+<div id="formArea">
+  <div class="header">
+    <div class="emoji-row">🧠💡</div>
+    <h1>HIT-6 头痛影响测试</h1>
+    <div class="subtitle">评估头痛对您日常生活的影响程度</div>
+  </div>
+  <div class="date-display" id="dateDisplay"></div>
+  <div class="patient-info">
+    <div class="section-title">👤 患者信息</div>
+    <div class="info-row">
+      <div class="info-field"><label>姓名</label><input type="text" id="patientName" placeholder="请输入姓名"></div>
+      <div class="info-field"><label>随访日期</label><input type="date" id="visitDate"></div>
+    </div>
+    <div class="info-row">
+      <div class="info-field"><label>就诊医院</label><input type="text" id="hospital" placeholder="请输入就诊医院"></div>
+      <div class="info-field"><label>确诊偏头痛日期</label><input type="date" id="diagnosisDate"></div>
+    </div>
+  </div>
+  <div class="progress-bar">
+    <div class="progress-top"><span class="progress-label">📝 答题进度</span><span class="progress-count" id="progressCount">0 / 6</span></div>
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  </div>
+  <div id="questionsContainer"></div>
+  <div class="bottom-actions">
+    <button class="btn btn-primary" id="submitBtn" disabled onclick="showResult()">查看评估结果</button>
+  </div>
+  <div class="result-panel" id="resultPanel">
+    <div class="result-header" id="resultHeader">
+      <div class="result-score" id="resultScore">--</div>
+      <div class="result-total">总分（满分 78 分）</div>
+      <div class="result-level" id="resultLevel">--</div>
+    </div>
+    <div class="result-body">
+      <div class="result-bar-container">
+        <div class="result-bar-label"><span>36</span><span>49</span><span>55</span><span>59</span><span>78</span></div>
+        <div class="result-bar-track">
+          <div class="result-bar-segments"><div class="seg seg-1"></div><div class="seg seg-2"></div><div class="seg seg-3"></div><div class="seg seg-4"></div></div>
+          <div class="result-bar-pointer" id="resultPointer" style="left:0%"></div>
+        </div>
+        <div class="result-legend">
+          <div class="legend-item"><div class="legend-dot" style="background:#4ECDC4"></div>≤49 较小影响</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#FFD93D"></div>50-55 中度</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#FF8C42"></div>56-59 明显</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#FF4757"></div>≥60 严重</div>
+        </div>
+      </div>
+      <div class="result-advice" id="resultAdvice"></div>
+    </div>
+    <div class="bottom-actions">
+      <button class="btn btn-outline btn-sm" onclick="resetForm()">🔄 重填</button>
+      <button class="btn btn-green btn-sm" onclick="showReport()">📋 查看关爱报告</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 关爱报告区域（在线展示） ===== -->
+<div class="section-divider" id="reportDivider" style="display:none">
+  <div class="line"></div>
+  <div class="divider-label">📋 评估关爱报告</div>
+  <div class="line"></div>
+</div>
+
+<div class="report-toolbar" id="reportToolbar">
+  <button class="btn btn-outline btn-sm" onclick="scrollToTop()">⬆️ 回到顶部</button>
+  <button class="btn btn-green btn-sm" onclick="downloadWord()">📄 下载 Word</button>
+  <button class="btn btn-orange btn-sm" onclick="downloadPDF()">📑 下载 PDF</button>
+</div>
+
+<div class="report-section" id="reportSection">
+  <div class="report-card" id="reportCard"></div>
+</div>
+
+<div id="exportContainer" style="position:fixed;left:-9999px;top:0;width:700px;background:#fff;z-index:-1;"></div>
+<canvas class="confetti" id="confettiCanvas"></canvas>
+
+<script>
+// ========== 数据 ==========
+const questions = [
+  { id:1, text:'当你头痛的时候，头痛程度经常是严重的吗？', dimension:'疼痛强度', emoji:'🤕' },
+  { id:2, text:'头痛经常会限制你的日常活动吗（如家务、工作、上学、社交活动）？', dimension:'日常功能', emoji:'🏃' },
+  { id:3, text:'当你头痛的时候，你经常想要躺下休息吗？', dimension:'活动受限', emoji:'🛏️' },
+  { id:4, text:'在过去4周里，你经常因为头痛觉得太疲惫而不能工作或日常活动吗？', dimension:'工作/学习影响', emoji:'😩' },
+  { id:5, text:'在过去4周里，你经常因为头痛觉得厌烦或者恼怒吗？', dimension:'情绪影响', emoji:'😤' },
+  { id:6, text:'在过去4周里，头痛经常影响你工作或者日常活动的注意力吗？', dimension:'认知功能', emoji:'🧩' }
+];
+const options = [
+  { label:'从不', score:6 },{ label:'很少', score:8 },{ label:'有时', score:10 },
+  { label:'经常', score:11 },{ label:'总是', score:13 }
+];
+
+// ICHD-3 诊断标准数据
+const ichd3 = {
+  overview: '偏头痛是一种常见的失能性原发性头痛，在GBD2010全球疾病负担调查中位列第三。我国18～65岁人群偏头痛年患病率为9.3%，男女之比1:2.2，遗传率约46%～52%。',
+  types: [
+    { code:'1.1', name:'无先兆偏头痛', icon:'🔵', criteria:[
+      'A. 符合B-D标准的头痛至少发作5次',
+      'B. 头痛发作持续4-72小时（未治疗或治疗效果不佳）',
+      'C. 至少符合4项中的2项：①单侧 ②搏动性 ③中重度 ④日常体力活动加重',
+      'D. 至少符合2项中的1项：①恶心/呕吐 ②畏光和畏声',
+      'E. 不能用ICHD-3中的其他诊断更好地解释'
+    ]},
+    { code:'1.2', name:'有先兆偏头痛', icon:'🟣', criteria:[
+      'A. 至少2次发作符合B和C',
+      'B. 至少1个可完全恢复的先兆症状（视觉、感觉、言语/语言、运动、脑干、视网膜）',
+      'C. 至少3个特征中的2个：①至少1个先兆症状逐渐进展≥5分钟 ②2个或以上先兆症状在48分钟内相继出现 ③每个先兆症状持续5-60分钟',
+      'D. 不能用ICHD-3中的其他诊断更好地解释'
+    ]},
+    { code:'1.3', name:'慢性偏头痛', icon:'🔴', criteria:[
+      'A. 头痛（紧张型或偏头痛样）每月发作≥15天，持续>3个月',
+      'B. 符合B-D标准的无先兆偏头痛头痛发作≥5次',
+      'C. 符合B-C标准的有先兆偏头痛发作≥2次',
+      'D. 在≥3个月的时间内，每月头痛天数≥15天中至少8天符合偏头痛特征或经曲普坦/麦角胺治疗缓解',
+      'E. 不能用ICHD-3中的其他诊断更好地解释'
+    ]}
+  ]
+};
+
+// 治疗方案数据
+const treatData = {
+  1: { acute:{ title:'急性期治疗建议', drugs:['对乙酰氨基酚','布洛芬','萘普生','双氯芬酸钾'], note:'轻度发作可首选NSAIDs，建议在发作早期尽早服药' }, prevent:{ title:'预防性治疗', drugs:[], content:'当前HIT-6评分提示头痛影响较小，一般不需要预防性用药。建议：' }, extra:'保持良好生活习惯，记录头痛日记，定期随访观察变化趋势。' },
+  2: { acute:{ title:'急性期治疗建议', drugs:['NSAIDs（布洛芬、萘普生、双氯芬酸）','曲普坦类（舒马曲普坦、佐米曲普坦）'], note:'如NSAIDs效果不佳可升级使用曲普坦类药物' }, prevent:{ title:'预防性治疗', drugs:[], content:'如头痛频繁或急性期治疗效果不佳，可考虑启动预防性治疗：' }, extra:'每月头痛天数≥4天或严重影响工作/生活，建议启动预防性治疗。' },
+  3: { acute:{ title:'急性期治疗建议', drugs:['曲普坦类（舒马曲普坦、佐米曲普坦、利扎曲普坦）','NSAIDs（萘普生、双氯芬酸钾）','复方制剂（曲马多+对乙酰氨基酚）'], note:'曲普坦类为推荐一线用药，建议在发作15分钟内尽早服用' }, prevent:{ title:'预防性治疗（建议启动）', drugs:['氟桂利嗪（5-10mg/d）','普萘洛尔（20-80mg/d）','美托洛尔（50-100mg/d）','托吡酯（25-100mg/d）','丙戊酸（500-1500mg/d）','阿米替林（25-75mg/d）'], content:'HIT-6 3级建议启动预防性治疗，目标减少头痛天数≥50%：' }, extra:'治疗2-3个月评估疗效，有效后维持6-12个月再考虑缓慢减量。注意：药物过度使用性头痛风险——曲普坦类/麦角类每月≤10天，NSAIDs/对乙酰氨基酚每月≤15天。' },
+  4: { acute:{ title:'急性期治疗建议', drugs:['曲普坦类（舒马曲普坦、佐米曲普坦）','二氢麦角胺（DHE）','复方制剂'], note:'重度发作建议联合用药，必要时急诊处理' }, prevent:{ title:'预防性治疗（强烈建议）', drugs:['氟桂利嗪（5-10mg/d）','普萘洛尔/美托洛尔','托吡酯（50-200mg/d）','丙戊酸（500-1500mg/d）','阿米替林（25-150mg/d）','文拉法辛（75-150mg/d）','坎地沙坦（16mg/d）'], content:'HIT-6 4级强烈推荐预防性治疗，必要时联合用药：' }, extra:'⚠️ 注意排查药物过度使用性头痛。如预防性治疗效果不佳（3个月充分治疗仍无效），建议转诊头痛专科。可考虑CGRP单抗等新型治疗。心理行为治疗（CBT、生物反馈）作为辅助手段。' }
+};
+
+// 生活方式管理
+const lifestyleData = [
+  { cat:'🍷 饮食诱因', items:'酒精（尤其红酒）、奶酪、巧克力、柑橘、味精、腌制食品、含亚硝酸盐的加工肉类' },
+  { cat:'😴 睡眠与作息', items:'睡眠不足或过多、不规律作息、倒班/时差。建议保持固定睡眠时间' },
+  { cat:'😰 情绪与压力', items:'情绪紧张是最常见诱因（约占59%）。压力释放后、焦虑、抑郁均可触发' },
+  { cat:'🌤️ 环境因素', items:'强光/闪烁光、噪音、强烈气味、天气变化、高海拔' },
+  { cat:'💊 药物因素', items:'口服避孕药、血管扩张剂、维A酸等。过度使用止痛药可致药物过度使用性头痛' },
+  { cat:'🏃 其他因素', items:'剧烈运动、脱水、饥饿/低血糖、月经周期（雌激素波动）、咖啡因过量或戒断' }
+];
+
+// 紧急就医信号
+const redFlags = [
+  '突发剧烈头痛（"雷击样"头痛），数秒至数分钟内达到高峰',
+  '头痛伴发热、颈项强直、皮疹',
+  '头痛伴神经系统症状：肢体无力、面瘫、言语不清、复视、意识障碍',
+  '50岁以后首次出现新型头痛',
+  '头痛性质、频率或严重程度突然明显变化',
+  '头痛伴视乳头水肿',
+  '头部外伤后出现的头痛',
+  '咳嗽、用力、Valsalva动作诱发的头痛',
+  '妊娠或产褥期出现的新发头痛'
+];
+
+let lastResult = null;
+
+// ========== 初始化 ==========
+function init() {
+  const now = new Date();
+  document.getElementById('dateDisplay').textContent = `${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日 ${['日','一','二','三','四','五','六'][now.getDay()]}`;
+  document.getElementById('visitDate').value = now.toISOString().split('T')[0];
+  const c = document.getElementById('questionsContainer');
+  questions.forEach((q, i) => {
+    const card = document.createElement('div');
+    card.className = 'question-card';
+    card.id = `qcard-${q.id}`;
+    card.innerHTML = `
+      <div class="q-header"><span class="q-number">${q.emoji}</span><div><div class="q-text">${q.text}</div><span class="q-dimension">${q.dimension}</span></div></div>
+      <div class="select-wrapper">
+        <select id="q${q.id}" onchange="onSelect(${q.id})">
+          <option value="">—— 请选择 ——</option>
+          ${options.map(o => `<option value="${o.score}">${o.label}（${o.score}分）</option>`).join('')}
+        </select>
+      </div>
+      <span class="score-hint" id="hint-${q.id}">得分：<span class="score-val" id="hval-${q.id}">0</span> 分</span>`;
+    c.appendChild(card);
+  });
+}
+
+function onSelect(id) {
+  const sel = document.getElementById(`q${id}`);
+  sel.classList.toggle('selected', sel.value !== '');
+  document.getElementById(`qcard-${id}`).classList.toggle('answered', sel.value !== '');
+  const h = document.getElementById(`hint-${id}`);
+  const hv = document.getElementById(`hval-${id}`);
+  if (sel.value) { h.classList.add('visible'); hv.textContent = sel.value; }
+  else { h.classList.remove('visible'); }
+  updateProgress();
+}
+
+function updateProgress() {
+  let a = 0;
+  for (let i = 1; i <= 6; i++) if (document.getElementById(`q${i}`).value) a++;
+  document.getElementById('progressCount').textContent = `${a} / 6`;
+  document.getElementById('progressFill').style.width = `${(a/6)*100}%`;
+  document.getElementById('submitBtn').disabled = (a < 6);
+}
+
+function getGradeInfo(t) {
+  if (t <= 49) return { level:1, label:'1级 · 无影响或较小影响', cls:'level-1', meaning:'头痛对日常生活无明显干扰，常规管理即可', advice:'🟢 头痛对日常生活无明显干扰。建议继续保持当前的管理方式，定期随访观察变化趋势。', suggestions:['继续维持当前治疗方案，保持良好生活习惯','定期随访，建议每3个月评估一次HIT-6评分','如分数较上次基线下降≥5分，说明治疗有效','记录头痛日记，识别并避免可能的诱因'] };
+  if (t <= 55) return { level:2, label:'2级 · 中度影响', cls:'level-2', meaning:'头痛已对部分日常活动产生干扰，需关注并考虑调整治疗方案', advice:'🟡 头痛已对部分日常活动产生干扰，建议与医生沟通评估是否需要调整治疗方案。', suggestions:['尽快与主治医生沟通，评估治疗方案','关注触发因素，记录头痛日记','保持规律作息，避免已知诱因','配合医生治疗，改善生活质量'] };
+  if (t <= 59) return { level:3, label:'3级 · 明显影响', cls:'level-3', meaning:'头痛明显干扰日常生活和工作，需积极干预', advice:'🟠 头痛明显干扰日常生活和工作，需积极干预。', suggestions:['尽快与主治医生讨论治疗方案调整','考虑预防性治疗，减少发作频率和严重程度','评估急性期用药是否合理，避免药物过度使用','必要时转诊头痛专科'] };
+  return { level:4, label:'4级 · 严重影响', cls:'level-4', meaning:'头痛严重损害生活质量，需紧急调整治疗方案', advice:'🔴 头痛严重损害生活质量，建议紧急调整治疗方案。', suggestions:['紧急调整治疗方案，不应再等待','讨论是否需要加强治疗或联合用药','当前治疗效果不佳应寻找替代方案','完善检查排除其他病因','建议转诊头痛专科或神经科'] };
+}
+
+function showResult() {
+  let t = 0;
+  for (let i = 1; i <= 6; i++) t += parseInt(document.getElementById(`q${i}`).value);
+  const g = getGradeInfo(t);
+  document.getElementById('resultScore').textContent = t;
+  document.getElementById('resultLevel').textContent = g.label;
+  document.getElementById('resultHeader').className = `result-header ${g.cls}`;
+  document.getElementById('resultAdvice').innerHTML = g.advice;
+  document.getElementById('resultPointer').style.left = `calc(${((t-36)/(78-36))*100}% - 2px)`;
+  document.getElementById('resultPanel').classList.add('show');
+  document.getElementById('resultPanel').scrollIntoView({ behavior:'smooth', block:'center' });
+
+  const ans = [];
+  questions.forEach(q => {
+    const s = parseInt(document.getElementById(`q${q.id}`).value);
+    const o = options.find(x => x.score === s);
+    ans.push({ ...q, score:s, optLabel:o.label });
+  });
+  lastResult = {
+    total:t, grade:g, answers:ans,
+    patientName: document.getElementById('patientName').value || '未填写',
+    visitDate: document.getElementById('visitDate').value || '',
+    hospital: document.getElementById('hospital').value || '未填写',
+    diagnosisDate: document.getElementById('diagnosisDate').value || ''
+  };
+  launchConfetti();
+
+  // 隐藏提交按钮
+  document.querySelector('#formArea .bottom-actions').style.display = 'none';
+}
+
+function resetForm() {
+  for (let i = 1; i <= 6; i++) {
+    document.getElementById(`q${i}`).value = '';
+    document.getElementById(`q${i}`).classList.remove('selected');
+    document.getElementById(`qcard-${i}`).classList.remove('answered');
+    document.getElementById(`hint-${i}`).classList.remove('visible');
+  }
+  document.getElementById('resultPanel').classList.remove('show');
+  document.querySelector('#formArea .bottom-actions').style.display = 'flex';
+  document.getElementById('reportSection').classList.remove('show');
+  document.getElementById('reportSection').style.display = 'none';
+  document.getElementById('reportDivider').style.display = 'none';
+  document.getElementById('reportToolbar').classList.remove('show');
+  updateProgress();
+  window.scrollTo({ top:0, behavior:'smooth' });
+}
+
+function formatDate(d) {
+  if (!d) return '未填写';
+  const x = new Date(d);
+  return `${x.getFullYear()}年${x.getMonth()+1}月${x.getDate()}日`;
+}
+
+function scrollToTop() { window.scrollTo({ top:0, behavior:'smooth' }); }
+
+// ========== 报告在线展示 ==========
+function showReport() {
+  document.getElementById('reportCard').innerHTML = generateReportHTML();
+  document.getElementById('reportDivider').style.display = 'flex';
+  document.getElementById('reportSection').style.display = 'block';
+  document.getElementById('reportSection').classList.add('show');
+  document.getElementById('reportToolbar').classList.add('show');
+  setTimeout(() => {
+    document.getElementById('reportDivider').scrollIntoView({ behavior:'smooth', block:'start' });
+  }, 100);
+}
+
+// ========== 报告HTML生成 ==========
+function generateReportHTML() {
+  const r = lastResult, g = r.grade, now = new Date();
+  const rptTime = `${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日 ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  let bc = '';
+  if (r.diagnosisDate) {
+    const dd = new Date(r.diagnosisDate), diff = Math.floor((now - dd) / (1000*60*60*24));
+    if (diff > 365) bc = `（病程约${Math.floor(diff/365)}年${Math.floor((diff%365)/30)}个月）`;
+    else if (diff > 30) bc = `（病程约${Math.floor(diff/30)}个月）`;
+    else bc = `（病程约${diff}天）`;
+  }
+  const pPct = ((r.total - 36) / (78 - 36)) * 100;
+  const td = treatData[g.level];
+
+  return `
+  <div class="report-banner"><div class="r-icon">🏥💜</div><div class="r-title">HIT-6 评估关爱报告</div><div class="r-sub">偏头痛患者随访评估 · 基于ICHD-3诊断标准与《中国偏头痛诊治指南（2022版）》</div><div class="r-line"></div></div>
+
+  <div class="encourage-block top"><div class="enc-emoji">🌟</div><div class="enc-text">亲爱的${r.patientName}，感谢您认真填写这份评估问卷。<br>每一次坚持随访，都是迈向稳定疗效的重要一步。<br>偏头痛的规范治疗需要时间和耐心，请相信——<strong>坚持治疗，才能收获长久的轻松与自在。</strong></div><div class="enc-author">—— 您的医疗团队</div></div>
+
+  <div class="rpt-section"><div class="rpt-section-title"><span class="sec-icon">📋</span>基本信息</div>
+    <table class="rpt-info-table"><tr><td>姓名</td><td>${r.patientName}</td></tr><tr><td>随访日期</td><td>${formatDate(r.visitDate)}</td></tr><tr><td>就诊医院</td><td>${r.hospital}</td></tr><tr><td>确诊偏头痛日期</td><td>${formatDate(r.diagnosisDate)}${bc}</td></tr><tr><td>报告生成时间</td><td>${rptTime}</td></tr></table></div>
+
+  <div class="rpt-section"><div class="rpt-section-title"><span class="sec-icon">📝</span>量表作答明细</div>
+    <table class="rpt-q-table"><thead><tr><th style="width:50px">题号</th><th>问题内容</th><th style="width:65px">维度</th><th style="width:80px">选择</th><th style="width:55px">得分</th></tr></thead><tbody>
+    ${r.answers.map(a => `<tr><td><span class="q-num">${a.id}</span></td><td>${a.text}</td><td style="font-size:12px;color:#999">${a.dimension}</td><td><span class="score-badge score-${a.score}">${a.optLabel}</span></td><td style="font-weight:700;color:var(--primary)">${a.score}</td></tr>`).join('')}</tbody></table></div>
+
+  <div class="score-result-card ${g.cls}"><div class="score-big">${r.total}</div><div class="score-label">HIT-6 总分（满分 78 分）</div><div class="grade-badge ${g.cls}">${g.label}</div></div>
+  <div class="rpt-bar-wrap"><div class="rpt-bar-labels"><span>36</span><span>49</span><span>55</span><span>59</span><span>78</span></div>
+    <div class="rpt-bar-track"><div class="rpt-bar-segs"><div class="s1"></div><div class="s2"></div><div class="s3"></div><div class="s4"></div></div><div class="rpt-bar-arrow" style="left:${pPct}%"></div></div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;font-size:11px;color:#aaa"><span>🟢 ≤49 较小</span><span>🟡 50-55 中度</span><span>🟠 56-59 明显</span><span>🔴 ≥60 严重</span></div></div>
+
+  <div class="rpt-section"><div class="rpt-section-title"><span class="sec-icon">📊</span>评估解读</div>
+    <p style="font-size:13px;color:#555;line-height:1.8">根据您的作答，HIT-6总分为 <strong style="color:var(--primary);font-size:16px">${r.total}分</strong>，属于 <strong>${g.label}</strong>。<br>${g.meaning}</p></div>
+
+  <div class="advice-block"><h4>💡 个性化建议</h4><p>${g.advice}</p><ul>${g.suggestions.map(s => `<li>${s}</li>`).join('')}</ul></div>
+
+  <div class="ref-section"><h4>📖 ICHD-3 偏头痛诊断标准参考</h4>
+    <p>${ichd3.overview}</p>
+    ${ichd3.types.map(t => `<div class="dx-card"><div class="dx-title">${t.icon} ${t.code} ${t.name}</div><ul class="dx-list">${t.criteria.map(c => `<li>${c}</li>`).join('')}</ul></div>`).join('')}
+    <p class="ref-note">注：以上为ICHD-3诊断标准要点摘要，诊断需由专业医生结合临床病史综合判断。参考来源：《国际头痛分类第三版》(ICHD-3)</p></div>
+
+  <div class="rpt-section"><div class="rpt-section-title"><span class="sec-icon">💊</span>治疗方案参考</div>
+    <p style="font-size:12px;color:#999;margin-bottom:10px">以下内容基于《中国偏头痛诊治指南（2022版）》，根据您的HIT-6评分分级提供相应的治疗信息参考。</p></div>
+  <div class="treatment-card acute"><h4>💊 ${td.acute.title}</h4>
+    <div class="drug-tags">${td.acute.drugs.map(d => `<span class="drug-tag">${d}</span>`).join('')}</div>
+    <div class="treatment-note">📌 ${td.acute.note}</div></div>
+  <div class="treatment-card preventive"><h4>🛡️ ${td.prevent.title}</h4>
+    ${td.prevent.content ? `<p style="font-size:12px;color:#1565C0;margin-bottom:6px">${td.prevent.content}</p>` : ''}
+    ${td.prevent.drugs.length ? `<div class="drug-tags">${td.prevent.drugs.map(d => `<span class="drug-tag blue">${d}</span>`).join('')}</div>` : ''}
+    ${td.extra ? `<div class="treatment-note">💡 ${td.extra}</div>` : ''}</div>
+
+  <div class="rpt-section"><div class="rpt-section-title"><span class="sec-icon">🌿</span>生活方式管理与诱因识别</div>
+    <p style="font-size:12px;color:#999;margin-bottom:10px">我国研究显示70%的偏头痛患者至少有1个诱因，最常见的是情绪紧张、劳累和睡眠障碍。识别并避免诱因是管理的重要一环。</p>
+    <div class="lifestyle-grid">${lifestyleData.map(l => `<div class="lifestyle-item"><h5>${l.cat}</h5><p>${l.items}</p></div>`).join('')}</div></div>
+
+  <div class="warning-box"><h4>🚨 以下情况请及时就医</h4><ul>${redFlags.map(f => `<li>${f}</li>`).join('')}</ul>
+    <p style="font-size:11px;color:#C62828;margin-top:8px">参考来源：《中国偏头痛诊治指南（2022版）》鉴别诊断部分</p></div>
+
+  <div class="encourage-block bottom"><div class="enc-emoji">💪🌈</div><div class="enc-text">${r.patientName}，治疗偏头痛是一场"马拉松"，而非"短跑"。<br>规律用药、科学管理、坚持随访——这三件事是您战胜偏头痛最有力的武器。<br><strong>请相信，每一次坚持，都在让您离稳定疗效更近一步。我们与您同行！</strong></div><div class="enc-author">—— 您的医疗团队</div></div>
+
+  <div class="disclaimer"><strong>⚠️ 免责声明</strong><br>
+    1. 本报告基于HIT-6量表自动生成，结合ICHD-3诊断标准和《中国偏头痛诊治指南（2022版）》提供参考信息，仅供临床参考，不能替代医生的专业诊断和治疗决策。<br>
+    2. 量表评分结果反映患者自评的主观感受，可能存在个体差异，具体诊疗方案请以主治医生的综合判断为准。<br>
+    3. 报告中的治疗建议均基于通用临床指南，不构成个性化的医疗处方。如有紧急情况，请及时就医。<br>
+    4. 本工具及报告数据仅用于患者随访管理，不涉及任何其他商业用途。<br>
+    <span style="font-size:11px;color:#aaa">参考来源：①《国际头痛分类第三版》(ICHD-3) ②《中国偏头痛诊治指南（2022版）》（中国医师协会神经内科医师分会）</span></div>
+
+  <div class="report-footer"><div class="footer-line"></div>HIT-6 头痛影响测试量表 · 评估关爱报告<br>报告生成时间：${rptTime}</div>`;
+}
+
+// ========== Word 导出 ==========
+async function downloadWord() {
+  const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType, BorderStyle, ShadingType } = docx;
+  const r = lastResult, g = r.grade, now = new Date();
+  const rptTime = `${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日 ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  const PURPLE='6C63FF', GRAY='636E72', DARK='333333';
+  let bc = '';
+  if (r.diagnosisDate) {
+    const dd = new Date(r.diagnosisDate), diff = Math.floor((now - dd) / (1000*60*60*24));
+    if (diff > 365) bc = `（病程约${Math.floor(diff/365)}年${Math.floor((diff%365)/30)}个月）`;
+    else if (diff > 30) bc = `（病程约${Math.floor(diff/30)}个月）`;
+    else bc = `（病程约${diff}天）`;
+  }
+  const td = treatData[g.level];
+  const children = [];
+  const p = (t, sz, bold, color, align) => new Paragraph({ spacing:{ before:60, after:60 }, alignment: align||AlignmentType.LEFT, children:[new TextRun({ text:t, size:sz||21, bold:!!bold, color:color||DARK })] });
+
+  children.push(new Paragraph({ spacing:{ before:200, after:100 }, alignment:AlignmentType.CENTER, children:[new TextRun({ text:'🏥  HIT-6 评估关爱报告', size:36, bold:true, color:PURPLE })] }));
+  children.push(new Paragraph({ spacing:{ after:100 }, alignment:AlignmentType.CENTER, children:[new TextRun({ text:'基于ICHD-3诊断标准与《中国偏头痛诊治指南（2022版）》', size:18, color:GRAY, italics:true })] }));
+  children.push(new Paragraph({ spacing:{ after:100 }, border:{ bottom:{ style:BorderStyle.SINGLE, size:6, color:PURPLE } }, children:[] }));
+
+  children.push(new Paragraph({ spacing:{ before:200, after:60 }, children:[new TextRun({ text:'🌟 致亲爱的'+r.patientName+'：', size:22, bold:true, color:PURPLE })] }));
+  children.push(new Paragraph({ spacing:{ after:40 }, indent:{ left:400 }, children:[new TextRun({ text:'感谢您认真填写这份评估问卷。每一次坚持随访，都是迈向稳定疗效的重要一步。偏头痛的规范治疗需要时间和耐心，请相信——', size:21, color:DARK }), new TextRun({ text:'坚持治疗，才能收获长久的轻松与自在。', size:21, bold:true, color:PURPLE })] }));
+  children.push(new Paragraph({ spacing:{ after:200 }, alignment:AlignmentType.RIGHT, children:[new TextRun({ text:'—— 您的医疗团队', size:20, color:GRAY, italics:true })] }));
+
+  children.push(new Paragraph({ spacing:{ before:200, after:100 }, children:[new TextRun({ text:'📋 基本信息', size:26, bold:true, color:PURPLE })] }));
+  const infoData = [['姓名',r.patientName],['随访日期',formatDate(r.visitDate)],['就诊医院',r.hospital],['确诊偏头痛日期',formatDate(r.diagnosisDate)+bc],['报告生成时间',rptTime]];
+  children.push(new Table({ width:{ size:100, type:WidthType.PERCENTAGE }, rows:infoData.map(([k,v]) => new TableRow({ children:[new TableCell({ width:{ size:35, type:WidthType.PERCENTAGE }, children:[new Paragraph({ children:[new TextRun({ text:k, size:20, color:GRAY })] })] }), new TableCell({ children:[new Paragraph({ children:[new TextRun({ text:v, size:20, color:DARK, bold:true })] })] })] })) }));
+
+  children.push(new Paragraph({ spacing:{ before:300, after:100 }, children:[new TextRun({ text:'📝 量表作答明细', size:26, bold:true, color:PURPLE })] }));
+  const qRows = [new TableRow({ tableHeader:true, children:['题号','问题内容','维度','选择','得分'].map(t => new TableCell({ shading:{ fill:'F0EEFF', type:ShadingType.CLEAR }, children:[new Paragraph({ children:[new TextRun({ text:t, size:18, bold:true, color:PURPLE })] })] })) })];
+  r.answers.forEach(a => { qRows.push(new TableRow({ children:[new TableCell({ children:[new Paragraph({ children:[new TextRun({ text:`Q${a.id}`, size:18, bold:true })] })] }), new TableCell({ children:[new Paragraph({ children:[new TextRun({ text:a.text, size:18 })] })] }), new TableCell({ children:[new Paragraph({ children:[new TextRun({ text:a.dimension, size:18, color:GRAY })] })] }), new TableCell({ children:[new Paragraph({ children:[new TextRun({ text:a.optLabel, size:18 })] })] }), new TableCell({ children:[new Paragraph({ children:[new TextRun({ text:`${a.score}分`, size:18, bold:true, color:PURPLE })] })] })] })); });
+  qRows.push(new TableRow({ children:[new TableCell({ columnSpan:4, children:[new Paragraph({ alignment:AlignmentType.RIGHT, children:[new TextRun({ text:'总分合计 →', size:20, bold:true })] })] }), new TableCell({ children:[new Paragraph({ children:[new TextRun({ text:`${r.total} 分`, size:22, bold:true, color:PURPLE })] })] })] }));
+  children.push(new Table({ width:{ size:100, type:WidthType.PERCENTAGE }, rows:qRows }));
+
+  children.push(new Paragraph({ spacing:{ before:300, after:60 }, alignment:AlignmentType.CENTER, children:[new TextRun({ text:`HIT-6 总分：${r.total} 分（满分 78 分）`, size:28, bold:true, color:PURPLE })] }));
+  children.push(new Paragraph({ spacing:{ after:60 }, alignment:AlignmentType.CENTER, children:[new TextRun({ text:`严重程度分级：${g.label}`, size:24, bold:true })] }));
+  children.push(new Paragraph({ spacing:{ after:100 }, alignment:AlignmentType.CENTER, children:[new TextRun({ text:g.meaning, size:20, color:GRAY })] }));
+
+  children.push(new Paragraph({ spacing:{ before:200, after:100 }, children:[new TextRun({ text:'💡 个性化建议', size:26, bold:true, color:PURPLE })] }));
+  children.push(p(g.advice));
+  g.suggestions.forEach(s => { children.push(new Paragraph({ spacing:{ after:30 }, indent:{ left:400 }, children:[new TextRun({ text:`• ${s}`, size:20, color:DARK })] })); });
+
+  children.push(new Paragraph({ spacing:{ before:300, after:100 }, children:[new TextRun({ text:'📖 ICHD-3 偏头痛诊断标准参考', size:26, bold:true, color:PURPLE })] }));
+  children.push(p(ichd3.overview, 20, false, DARK));
+  ichd3.types.forEach(t => {
+    children.push(new Paragraph({ spacing:{ before:120, after:60 }, children:[new TextRun({ text:`${t.icon} ${t.code} ${t.name}`, size:22, bold:true, color:PURPLE })] }));
+    t.criteria.forEach(c => { children.push(new Paragraph({ spacing:{ after:20 }, indent:{ left:400 }, children:[new TextRun({ text:`• ${c}`, size:19, color:DARK })] })); });
+  });
+  children.push(new Paragraph({ spacing:{ before:60, after:100 }, children:[new TextRun({ text:'注：以上为ICHD-3诊断标准要点摘要，诊断需由专业医生结合临床病史综合判断。', size:18, color:GRAY, italics:true })] }));
+
+  children.push(new Paragraph({ spacing:{ before:300, after:100 }, children:[new TextRun({ text:'💊 治疗方案参考（基于《中国偏头痛诊治指南2022》）', size:26, bold:true, color:PURPLE })] }));
+  children.push(new Paragraph({ spacing:{ before:120, after:60 }, children:[new TextRun({ text:`💊 ${td.acute.title}`, size:22, bold:true, color:'2E7D32' })] }));
+  td.acute.drugs.forEach(d => { children.push(new Paragraph({ spacing:{ after:20 }, indent:{ left:400 }, children:[new TextRun({ text:`• ${d}`, size:20, color:DARK })] })); });
+  children.push(new Paragraph({ spacing:{ before:40, after:60 }, indent:{ left:400 }, children:[new TextRun({ text:`📌 ${td.acute.note}`, size:18, color:GRAY })] }));
+  children.push(new Paragraph({ spacing:{ before:120, after:60 }, children:[new TextRun({ text:`🛡️ ${td.prevent.title}`, size:22, bold:true, color:'1565C0' })] }));
+  if (td.prevent.content) children.push(new Paragraph({ spacing:{ after:40 }, indent:{ left:400 }, children:[new TextRun({ text:td.prevent.content, size:20, color:'1565C0' })] }));
+  td.prevent.drugs.forEach(d => { children.push(new Paragraph({ spacing:{ after:20 }, indent:{ left:400 }, children:[new TextRun({ text:`• ${d}`, size:20, color:DARK })] })); });
+  if (td.extra) children.push(new Paragraph({ spacing:{ before:40, after:60 }, indent:{ left:400 }, children:[new TextRun({ text:`💡 ${td.extra}`, size:18, color:GRAY })] }));
+
+  children.push(new Paragraph({ spacing:{ before:300, after:100 }, children:[new TextRun({ text:'🌿 生活方式管理与诱因识别', size:26, bold:true, color:PURPLE })] }));
+  children.push(p('我国研究显示70%的偏头痛患者至少有1个诱因，最常见的是情绪紧张、劳累和睡眠障碍。识别并避免诱因是管理的重要一环。', 20, false, DARK));
+  lifestyleData.forEach(l => {
+    children.push(new Paragraph({ spacing:{ before:80, after:20 }, children:[new TextRun({ text:l.cat, size:20, bold:true, color:PURPLE })] }));
+    children.push(new Paragraph({ spacing:{ after:40 }, indent:{ left:400 }, children:[new TextRun({ text:l.items, size:19, color:DARK })] }));
+  });
+
+  children.push(new Paragraph({ spacing:{ before:300, after:100 }, children:[new TextRun({ text:'🚨 以下情况请及时就医', size:26, bold:true, color:'C62828' })] }));
+  redFlags.forEach(f => { children.push(new Paragraph({ spacing:{ after:20 }, indent:{ left:400 }, children:[new TextRun({ text:`• ${f}`, size:20, color:'C62828' })] })); });
+
+  children.push(new Paragraph({ spacing:{ before:400 }, border:{ bottom:{ style:BorderStyle.SINGLE, size:4, color:'FFD93D' } }, children:[] }));
+  children.push(new Paragraph({ spacing:{ before:200, after:60 }, children:[new TextRun({ text:'💪🌈 写给'+r.patientName+'的话：', size:22, bold:true, color:'E67A35' })] }));
+  children.push(new Paragraph({ spacing:{ after:40 }, indent:{ left:400 }, children:[new TextRun({ text:'治疗偏头痛是一场"马拉松"，而非"短跑"。规律用药、科学管理、坚持随访——这三件事是您战胜偏头痛最有力的武器。', size:21, color:DARK })] }));
+  children.push(new Paragraph({ spacing:{ after:200 }, indent:{ left:400 }, children:[new TextRun({ text:'请相信，每一次坚持，都在让您离稳定疗效更近一步。我们与您同行！', size:21, bold:true, color:'E67A35' })] }));
+  children.push(new Paragraph({ spacing:{ after:200 }, alignment:AlignmentType.RIGHT, children:[new TextRun({ text:'—— 您的医疗团队', size:20, color:GRAY, italics:true })] }));
+
+  children.push(new Paragraph({ spacing:{ before:200, after:60 }, children:[new TextRun({ text:'⚠️ 免责声明', size:20, bold:true, color:GRAY })] }));
+  ['本报告基于HIT-6量表自动生成，结合ICHD-3诊断标准和《中国偏头痛诊治指南（2022版）》提供参考信息，仅供临床参考，不能替代医生的专业诊断和治疗决策。',
+   '量表评分结果反映患者自评的主观感受，可能存在个体差异，具体诊疗方案请以主治医生的综合判断为准。',
+   '报告中的治疗建议均基于通用临床指南，不构成个性化的医疗处方。如有紧急情况，请及时就医。',
+   '本工具及报告数据仅用于患者随访管理，不涉及任何其他商业用途。'
+  ].forEach((d, i) => { children.push(new Paragraph({ spacing:{ after:30 }, children:[new TextRun({ text:`${i+1}. ${d}`, size:18, color:'999999' })] })); });
+  children.push(new Paragraph({ spacing:{ before:60, after:60 }, children:[new TextRun({ text:'参考来源：①《国际头痛分类第三版》(ICHD-3) ②《中国偏头痛诊治指南（2022版）》（中国医师协会神经内科医师分会）', size:17, color:'BBBBBB' })] }));
+  children.push(new Paragraph({ spacing:{ before:200 }, alignment:AlignmentType.CENTER, children:[new TextRun({ text:`报告生成时间：${rptTime}`, size:18, color:'BBBBBB' })] }));
+
+  const doc = new Document({ sections:[{ properties:{}, children }] });
+  const blob = await Packer.toBlob(doc);
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `HIT6评估关爱报告_${r.patientName}_${r.visitDate}.docx`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ========== PDF 导出 ==========
+function downloadPDF() {
+  const r = lastResult;
+  const el = document.getElementById('exportContainer');
+  el.innerHTML = `<div style="padding:30px 40px;font-family:'PingFang SC','Microsoft YaHei',sans-serif;color:#333;line-height:1.8;font-size:13px;">${generateReportHTML()}</div>`;
+  html2pdf().set({
+    margin:[10,10,10,10],
+    filename:`HIT6评估关爱报告_${r.patientName}_${r.visitDate}.pdf`,
+    image:{ type:'jpeg', quality:0.95 },
+    html2canvas:{ scale:2, useCORS:true, letterRendering:true },
+    jsPDF:{ unit:'mm', format:'a4', orientation:'portrait' },
+    pagebreak:{ mode:['avoid-all','css','legacy'] }
+  }).from(el).save().then(() => { el.innerHTML = ''; });
+}
+
+// ========== 🎉 撒花 ==========
+function launchConfetti() {
+  const canvas = document.getElementById('confettiCanvas'), ctx = canvas.getContext('2d');
+  canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+  const colors = ['#6C63FF','#FF6B6B','#4ECDC4','#FFD93D','#FF8C42','#A78BFA'];
+  const particles = [];
+  for (let i = 0; i < 60; i++) particles.push({ x:Math.random()*canvas.width, y:Math.random()*canvas.height-canvas.height, w:Math.random()*8+4, h:Math.random()*6+3, color:colors[Math.floor(Math.random()*colors.length)], vy:Math.random()*3+2, vx:(Math.random()-0.5)*2, rot:Math.random()*360, vr:(Math.random()-0.5)*8 });
+  let frame = 0;
+  function animate() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    particles.forEach(p => { p.y += p.vy; p.x += p.vx; p.rot += p.vr; ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot*Math.PI/180); ctx.fillStyle = p.color; ctx.fillRect(-p.w/2, -p.h/2, p.w, p.h); ctx.restore(); });
+    frame++;
+    if (frame < 120) requestAnimationFrame(animate);
+    else ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+  animate();
+}
+
+init();
+</script>
+</body>
+</html>
